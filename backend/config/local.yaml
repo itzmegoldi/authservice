@@ -1,0 +1,15 @@
+---
+server:
+  host: 0.0.0.0
+  port: 8080
+database:
+  url: sqlite:///./data/auth.db
+kafka:
+  bootstrap_servers: localhost:9092
+redis:
+  host: localhost
+auth:
+  issuer: http://localhost:8080
+  bootstrap:
+    admin_email: admin@example.com
+    admin_password: ChangeMe123!

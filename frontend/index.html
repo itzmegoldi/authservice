@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth Service Console</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f7f9;
+        color: #20242c;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 48px 20px;
+      }
+      section {
+        background: #ffffff;
+        border: 1px solid #dfe3ea;
+        border-radius: 8px;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 32px;
+        line-height: 1.15;
+        margin: 0 0 16px;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 0 0 14px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 650;
+        margin-top: 12px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #c9d0dc;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font: inherit;
+        margin-top: 6px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        background: #1868db;
+        color: white;
+        padding: 10px 14px;
+        font-weight: 700;
+        margin-top: 16px;
+        cursor: pointer;
+      }
+      pre {
+        min-height: 80px;
+        overflow: auto;
+        background: #101828;
+        color: #d8e7ff;
+        border-radius: 8px;
+        padding: 14px;
+        white-space: pre-wrap;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .muted {
+        color: #5b6472;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Auth Service Console</h1>
+      <p class="muted">Local development console for token issuing and verification.</p>
+      <div class="grid">
+        <section>
+          <h2>Login</h2>
+          <label>Realm <input id="realm" value="master" /></label>
+          <label>Email <input id="email" value="admin@example.com" /></label>
+          <label>Password <input id="password" type="password" value="ChangeMe123!" /></label>
+          <button id="login">Get token</button>
+        </section>
+        <section>
+          <h2>JWT Response</h2>
+          <pre id="output">Waiting for login...</pre>
+        </section>
+      </div>
+    </main>
+    <script>
+      const output = document.querySelector("#output");
+      document.querySelector("#login").addEventListener("click", async () => {
+        output.textContent = "Requesting token...";
+        const body = {
+          realm: document.querySelector("#realm").value,
+          email: document.querySelector("#email").value,
+          password: document.querySelector("#password").value
+        };
+        try {
+          const response = await fetch("http://localhost:8080/api/v1/auth/login", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          output.textContent = JSON.stringify(await response.json(), null, 2);
+        } catch (error) {
+          output.textContent = error.message;
+        }
+      });
+    </script>
+  </body>
+</html>

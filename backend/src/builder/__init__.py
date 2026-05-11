@@ -1,0 +1,43 @@
+from typing import Optional
+
+from src.builder.clients import Clients
+from src.builder.services import Services
+from src.config.config import Config
+
+__cfg: Optional[Config] = None
+__svc: Optional[Services] = None
+__clients: Optional[Clients] = None
+
+
+def get_config() -> Config:
+    if __cfg is None:
+        raise ValueError("config has not been loaded")
+    return __cfg
+
+
+def get_services() -> Services:
+    if __svc is None:
+        raise ValueError("services have not been loaded")
+    return __svc
+
+
+def get_clients() -> Clients:
+    if __clients is None:
+        raise ValueError("clients have not been loaded")
+    return __clients
+
+
+def set_config(config: Config):
+    global __cfg  # pylint: disable=global-statement
+    __cfg = config
+
+
+def set_services(service: Services):
+    global __svc  # pylint: disable=global-statement
+    __svc = service
+
+
+def set_clients(clients: Clients):
+    global __clients  # pylint: disable=global-statement
+    __clients = clients
+
