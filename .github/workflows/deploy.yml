@@ -21,22 +21,22 @@ jobs:
       - name: Build Image API
         run: |
           echo "Building API Image"
-          docker build -f build/Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/vpn-api:latest .
-          docker build -f build/Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/vpn-api:${{ github.sha }} .
+          docker build -f build/Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/auth-api:latest .
+          docker build -f build/Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/auth-api:${{ github.sha }} .
 
       - name: Build Image Worker
         run: |
           echo "Building Worker Image"
-          docker build -f build/Dockerfile.worker -t ghcr.io/${{ github.repository_owner }}/vpn-worker:latest .
-          docker build -f build/Dockerfile.worker -t ghcr.io/${{ github.repository_owner }}/vpn-worker:${{ github.sha }} .
+          docker build -f build/Dockerfile.worker -t ghcr.io/${{ github.repository_owner }}/auth-worker:latest .
+          docker build -f build/Dockerfile.worker -t ghcr.io/${{ github.repository_owner }}/auth-worker:${{ github.sha }} .
 
       - name: Push Image
         run: |
           echo "Pushing Image"
-          docker push ghcr.io/${{ github.repository_owner }}/vpn-api:latest
-          docker push ghcr.io/${{ github.repository_owner }}/vpn-api:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/vpn-worker:latest
-          docker push ghcr.io/${{ github.repository_owner }}/vpn-worker:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/auth-api:latest
+          docker push ghcr.io/${{ github.repository_owner }}/auth-api:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/auth-worker:latest
+          docker push ghcr.io/${{ github.repository_owner }}/auth-worker:${{ github.sha }}
 
       # - name: Checkout Kubernetes repo
       #   uses: actions/checkout@v4
@@ -48,13 +48,13 @@ jobs:
       # - name: Update API image
       #   run: |
       #     sed -i \
-      #       "s|image: ghcr.io/${{ github.repository_owner }}/vpn-api:.*|image: ghcr.io/${{ github.repository_owner }}/vpn-api:${{ github.sha }}|" \
+      #       "s|image: ghcr.io/${{ github.repository_owner }}/auth-api:.*|image: ghcr.io/${{ github.repository_owner }}/auth-api:${{ github.sha }}|" \
       #       kube-gitops/authservice/api-deployment.yaml
 
       # - name: Update Worker image
       #   run: |
       #     sed -i \
-      #       "s|image: ghcr.io/${{ github.repository_owner }}/vpn-worker:.*|image: ghcr.io/${{ github.repository_owner }}/vpn-worker:${{ github.sha }}|" \
+      #       "s|image: ghcr.io/${{ github.repository_owner }}/auth-worker:.*|image: ghcr.io/${{ github.repository_owner }}/auth-worker:${{ github.sha }}|" \
       #       kube-gitops/authservice/worker-deployment.yaml
 
       # - name: Commit and Push changes
