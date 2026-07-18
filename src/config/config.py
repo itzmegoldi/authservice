@@ -18,14 +18,15 @@ class DatabaseConfig(BaseModel):
     username: str
     password: str
     url: str
-    port: int
+    port: str
     database: str
-    ssl: Optional[DbSslConfig]
+    ssl: Optional[DbSslConfig] = None
 
 
 class RedisConfig(BaseModel):
     host: str
-    port: int
+    port: str
+    password: Optional[str] = None
 
 
 class BootstrapConfig(BaseModel):
@@ -41,6 +42,7 @@ class KeyConfig(BaseModel):
 class AuthConfig(BaseModel):
     issuer: str
     token_ttl_minutes: int
+    refresh_token_ttl_days: int
     bootstrap: BootstrapConfig
     keys: KeyConfig
 

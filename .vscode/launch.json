@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: API",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.api.main",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "APP_ENV": "local"
+      }
+    }
+  ]
+}

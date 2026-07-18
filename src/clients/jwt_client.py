@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from src.config.config import Config
-from src.models.models import UserAccount
+from src.models.user import UserModel
 
 
 class JwtClient:
@@ -35,7 +35,22 @@ class JwtClient:
             self.public_key = self.private_key.public_key()
         self.kid = f"auth-service-{int(datetime.now(timezone.utc).timestamp())}"
 
-    def create_access_token(self, user: UserAccount) -> tuple[str, datetime, list[str]]:
+    def _create_token(
+        self,
+        claims: dict[str, Any],
+        expires_at: datetime,
+    ) -> str:
+        claims["iat"] = int(datetime.now(timezone.utc).timestamp())
+        claims["exp"] = int(expires_at.timestamp())
+
+        return jwt.encode(
+            claims,
+            self._private_pem(),
+            algorithm="RS256",
+            headers={"kid": self.kid},
+        )
+
+    def create_access_token(self, user: UserModel) -> tuple[str, datetime, list[str]]:
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self.config.auth.token_ttl_minutes)
         roles = sorted(role.name for role in user.roles)
@@ -48,12 +63,37 @@ class JwtClient:
             "realm": user.realm.name,
             "email": user.email,
             "roles": roles,
-            "attributes": user.attributes_json,
+            "attributes": user.attributes,
         }
-        token = jwt.encode(
-            claims, self._private_pem(), algorithm="RS256", headers={"kid": self.kid}
+        token = self._create_token(
+            claims,
+            expires_at,
         )
-        return token, expires_at, roles
+        return token, expires_at
+
+    def create_refresh_token(
+        self,
+        user: UserModel,
+    ) -> tuple[str, datetime]:
+
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            days=self.config.auth.refresh_token_ttl_days
+        )
+
+        claims = {
+            "iss": self.config.auth.issuer,
+            "sub": str(user.id),
+            "typ": "refresh",
+            "iat": int(datetime.now(timezone.utc).timestamp()),
+            "exp": int(expires_at.timestamp()),
+        }
+
+        token = self._create_token(
+            claims,
+            expires_at,
+        )
+
+        return token, expires_at
 
     def decode_access_token(self, token: str) -> dict[str, Any]:
         return jwt.decode(

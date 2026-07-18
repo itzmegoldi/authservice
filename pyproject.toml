@@ -10,8 +10,18 @@ requires-python = ">=3.12"
 dependencies = [
     "uvicorn (>=0.51.0,<0.52.0)",
     "kafka-python (>=3.0.8,<4.0.0)",
-    "passlib (>=1.7.4,<2.0.0)",
+    "passlib[bcrypt] (>=1.7.4,<2.0.0)",
     "pydantic (>=2.13.4,<3.0.0)",
+    "alembic (>=1.18.5,<2.0.0)",
+    "python-dotenv (>=1.2.2,<2.0.0)",
+    "pyyaml (>=6.0.3,<7.0.0)",
+    "psycopg2-binary (>=2.9.12,<3.0.0)",
+    "fastapi (>=0.139.2,<0.140.0)",
+    "structlog (>=26.1.0,<27.0.0)",
+    "asyncpg (>=0.31.0,<0.32.0)",
+    "bcrypt (==4.0.1)",
+    "pyjwt (>=2.13.0,<3.0.0)",
+    "cryptography (>=49.0.0,<50.0.0)",
 ]
 
 

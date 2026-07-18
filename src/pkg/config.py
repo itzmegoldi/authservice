@@ -69,7 +69,7 @@ def recursive_merge(original: Any, to_merge: Any) -> Any:
 
 def load_and_merge_from_yaml(config_dir: str, environment: str, strict: bool = True):
     all_data: Any = []
-    for env_name in ["default", environment]:
+    for env_name in [environment]:
         file_name = os.path.join(config_dir, f"{env_name}.yaml")
         if not os.path.isfile(file_name):
             continue
@@ -78,7 +78,7 @@ def load_and_merge_from_yaml(config_dir: str, environment: str, strict: bool = T
         process_yaml_data(data, False)
         all_data.append(data)
 
-    if len(all_data) == 2:
+    if len(all_data) > 2:
         merged_data = recursive_merge(all_data[0], all_data[1])
     else:
         merged_data = all_data[0]
@@ -95,4 +95,3 @@ class ConfigMixIn:
         )
         ta = TypeAdapter(cls)
         return ta.validate_python(merged_data)
-

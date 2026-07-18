@@ -15,6 +15,3 @@ class Clients:
         # pylint: disable=attribute-defined-outside-init
         self.token_client = JwtClient(config=config)
         return self
-
-    def close(self):
-        self.message_client.close()

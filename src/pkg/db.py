@@ -1,12 +1,29 @@
 import os
 import ssl
-from pathlib import Path
-from typing import Generator, Protocol
+from typing import Protocol
 
-from sqlalchemy import BigInteger, Column, create_engine, JSON, MetaData, String, Table
+from sqlalchemy import BigInteger, Column, create_engine, func, MetaData, Table
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, DeclarativeMeta, Session, sessionmaker
+from sqlalchemy.orm import declarative_base, declarative_base, Session, sessionmaker
 from src.config.config import DatabaseConfig
+
+
+Base = declarative_base()
+
+
+class BaseModel(Base):
+    __abstract__ = True
+
+    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
+    created_at = Column(
+        BigInteger, nullable=False, server_default=func.extract("epoch", func.now())
+    )
+    updated_at = Column(
+        BigInteger,
+        nullable=False,
+        server_default=func.extract("epoch", func.now()),
+        onupdate=func.extract("epoch", func.now()),
+    )
 
 
 class IHandler(Protocol):  # pragma: no cover

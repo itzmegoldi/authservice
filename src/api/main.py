@@ -5,16 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.api.v1 import auth, authorization
-from src.builder import get_clients, get_config
+from src.api.v1 import router as v1_router
+from src.builder import get_services
 from src.builder.helper import fetch_config, fetch_config_and_build_services
-from src.repositories.sqlalchemy import (
-    SqlAlchemyPolicyRepository,
-    SqlAlchemyRealmRepository,
-    SqlAlchemyRoleRepository,
-    SqlAlchemyUserRepository,
-)
-from src.services.bootstrap_service import BootstrapService
 from src.pkg import logging
 from src.pkg.middlewares import ErrorHandlingMiddleware, LoggerInitMiddleware
 
@@ -22,33 +15,30 @@ logging.configure_logger(
     default_logger_names=[
         "root",
         "fastapi",
-        "sqlalchemy.engine",
+        "sqlalchemy.engine.warnings",
         "alembic.runtime.migration",
-        "uvicorn.access", 
+        "uvicorn.access",
         "uvicorn.error",
-        "uvicorn"
-        ],
+        "uvicorn",
+    ],
 )
-
 logger = logging.get_logger()
+
+
+def get_user_service():
+    return get_services().user_service
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     fetch_config_and_build_services()
-    clients = get_clients()
-    with clients.db_handler.get_session() as db:
-        BootstrapService(
-            config=get_config(),
-            realms=SqlAlchemyRealmRepository(db),
-            roles=SqlAlchemyRoleRepository(db),
-            users=SqlAlchemyUserRepository(db),
-            policies=SqlAlchemyPolicyRepository(db),
-        ).ensure_default_realm()
-        db.commit()
+
     try:
-        yield
-    finally:
-        clients.close()
+        get_user_service().bootstrap()
+    except Exception as e:
+        logger.exception(f"Failed to bootstrap application {str(e)}")
+
+    yield
 
 
 app = FastAPI(title="Auth Service", lifespan=lifespan)
@@ -63,20 +53,18 @@ app.add_middleware(
 app.add_middleware(ErrorHandlingMiddleware)
 app.add_middleware(LoggerInitMiddleware)
 
-app.include_router(auth.router)
-app.include_router(authorization.router)
+app.include_router(v1_router)
 
 
 class HealthCheckModel(BaseModel):
     status: str
 
 
-@app.get("/actuator/health", response_model=HealthCheckModel)
+@app.get("/health", response_model=HealthCheckModel)
 def health_check():
-    return {"status": "UP"}
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
     cfg = fetch_config()
     uvicorn.run(app, host=cfg.server.host, port=cfg.server.port, log_config=None)
-

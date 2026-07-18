@@ -1,7 +1,7 @@
 ---
 server:
   host: 0.0.0.0
-  port: 8080
+  port: $env["SERVER_PORT"]
 database:
   username: $env["DATABASE_USERNAME"]
   password: $env["DATABASE_PASSWORD"]
@@ -9,15 +9,14 @@ database:
   port: $env["DATABASE_PORT"]
   database: $env["DATABASE_NAME"]
 redis:
-  host: $env["REDIS_URL"]
+  host: $env["REDIS_HOST"]
   port: $env["REDIS_PORT"]
 auth:
-  issuer: http://localhost:8080
+  issuer: $env["AUTH_ISSUER"]
   token_ttl_minutes: 30
-  refresh_token_ttl_days: 30
   keys:
     secret: $env["AUTH_KEYS_SECRET"]
     public: $env["AUTH_KEYS_PUBLIC"]
   bootstrap:
-    admin_email: admin@example.com
-    admin_password: ChangeMe123!
+    admin_email: $env["AUTH_ADMIN_EMAIL"]
+    admin_password: $env["AUTH_ADMIN_PASSWORD"]
