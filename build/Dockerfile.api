@@ -1,15 +1,42 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
-WORKDIR /app
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV MICRO_SERVICE=/app \
+    VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH" \
+    POETRY_VERSION=2.4.1
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN mkdir -p ${MICRO_SERVICE}
 
-COPY . .
-RUN mkdir -p /app/data && chmod +x /app/build/start.api.sh
+FROM base AS builder
 
+WORKDIR ${MICRO_SERVICE}
+
+RUN pip install --no-cache-dir poetry==${POETRY_VERSION}
+
+COPY pyproject.toml poetry.lock ./
+
+# Create the virtual environment inside /app/.venv
+RUN poetry config virtualenvs.in-project true \
+    && poetry install --no-root --only main
+
+FROM base AS runtime
+
+WORKDIR ${MICRO_SERVICE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Copy the virtual environment from the builder stage
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+
+# Copy application source
+COPY src ./src
+COPY config ./config
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY build/start.api.sh ./start.api.sh
+
+RUN chmod +x ./start.api.sh
 EXPOSE 8080
-CMD ["/app/build/start.api.sh"]
+CMD ["./start.api.sh"]
 

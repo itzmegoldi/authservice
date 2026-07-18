@@ -1,0 +1,71 @@
+name: Build and Push Docker Image
+on:
+  push:
+    branches:
+      - main
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Image API
+        run: |
+          echo "Building API Image"
+          docker build -f build/Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/vpn-api:latest .
+          docker build -f build/Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/vpn-api:${{ github.sha }} .
+
+      - name: Build Image Worker
+        run: |
+          echo "Building Worker Image"
+          docker build -f build/Dockerfile.worker -t ghcr.io/${{ github.repository_owner }}/vpn-worker:latest .
+          docker build -f build/Dockerfile.worker -t ghcr.io/${{ github.repository_owner }}/vpn-worker:${{ github.sha }} .
+
+      - name: Push Image
+        run: |
+          echo "Pushing Image"
+          docker push ghcr.io/${{ github.repository_owner }}/vpn-api:latest
+          docker push ghcr.io/${{ github.repository_owner }}/vpn-api:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/vpn-worker:latest
+          docker push ghcr.io/${{ github.repository_owner }}/vpn-worker:${{ github.sha }}
+
+      # - name: Checkout Kubernetes repo
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: itzmegoldi/kube-gitops
+      #     token: ${{ secrets.K8S_REPO_TOKEN }}
+      #     path: kube-gitops
+
+      # - name: Update API image
+      #   run: |
+      #     sed -i \
+      #       "s|image: ghcr.io/${{ github.repository_owner }}/vpn-api:.*|image: ghcr.io/${{ github.repository_owner }}/vpn-api:${{ github.sha }}|" \
+      #       kube-gitops/authservice/api-deployment.yaml
+
+      # - name: Update Worker image
+      #   run: |
+      #     sed -i \
+      #       "s|image: ghcr.io/${{ github.repository_owner }}/vpn-worker:.*|image: ghcr.io/${{ github.repository_owner }}/vpn-worker:${{ github.sha }}|" \
+      #       kube-gitops/authservice/worker-deployment.yaml
+
+      # - name: Commit and Push changes
+      #   run: |
+      #     cd kube-gitops
+
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      #     git add api-deployment.yaml worker-deployment.yaml
+
+      #     git commit -m "Update images to ${{ github.sha }}" || echo "No changes"
+
+      #     git push origin HEAD
