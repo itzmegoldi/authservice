@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from src.pkg.config import ConfigMixIn
 
 
@@ -39,12 +39,17 @@ class KeyConfig(BaseModel):
     rsa_public_pem: str = ""
 
 
+class GoogleAuthConfig(BaseModel):
+    client_id: str = ""
+
+
 class AuthConfig(BaseModel):
     issuer: str
     token_ttl_minutes: int
     refresh_token_ttl_days: int
     bootstrap: BootstrapConfig
     keys: KeyConfig
+    google: GoogleAuthConfig = Field(default_factory=GoogleAuthConfig)
 
 
 class Config(BaseModel, ConfigMixIn):

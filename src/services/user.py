@@ -4,8 +4,8 @@ from src.builder.clients import Clients
 from src.config.config import Config
 from src.dto.user import BootstrapUser, UserCreateRequestDto, UserLoginRequest
 from src.pkg import logging
-from src.repositories.user import IUserRepository
 from src.repositories.client import IClientRepository
+from src.repositories.user import IUserRepository
 
 logger = logging.get_logger()
 
@@ -33,6 +33,9 @@ class IUserService(Protocol):
     def oauth_refresh_grant(
         self, client_id: str, client_secret: str, realm: str, refresh_token: str
     ) -> dict: ...
+    def oauth_google_grant(
+        self, client_id: str, client_secret: str, realm: str, google_id_token: str
+    ) -> dict: ...
 
 
 class UserService(IUserService):
@@ -41,6 +44,7 @@ class UserService(IUserService):
         self.clients = clients
         self.repo = repo
         self.token_client = self.clients.token_client
+        self.google_client = self.clients.google_client
         self.client_repo: IClientRepository | None = None
 
     def with_client_repository(self, client_repo: IClientRepository):
@@ -136,6 +140,36 @@ class UserService(IUserService):
     ) -> dict:
         self._validate_oauth_client(client_id, client_secret, realm, "refresh_token")
         return self.refresh(refresh_token, client_id=client_id, realm=realm)
+
+    def oauth_google_grant(
+        self, client_id: str, client_secret: str, realm: str, google_id_token: str
+    ) -> dict:
+        self._validate_oauth_client(client_id, client_secret, realm, "google")
+        google_client_id = self.config.auth.google.client_id
+        if not google_client_id:
+            raise ValueError("Google login has not been configured")
+        try:
+            claims = self.google_client.verify_id_token(
+                google_id_token, google_client_id
+            )
+        except Exception as error:
+            raise ValueError("Invalid Google ID token") from error
+
+        google_subject = claims.get("sub")
+        email = claims.get("email")
+        email_verified = claims.get("email_verified")
+        if not google_subject or not email or email_verified not in (True, "true"):
+            raise ValueError("Google account does not have a verified email")
+
+        user = self.repo.get_user_by_google_subject(google_subject)
+        if user and user.realm.name != realm:
+            raise ValueError("Google account is linked to another realm")
+        if not user:
+            user_id = self.repo.create_google_user(google_subject, email, realm)
+            user = self.repo.get_user_by_id(user_id)
+        if not user or not user.is_active:
+            raise ValueError("User is not available")
+        return self._issue_token_pair(user, client_id=client_id, realm=realm)
 
     def _validate_oauth_client(
         self, client_id: str, client_secret: str, realm: str, grant_type: str

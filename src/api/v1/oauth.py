@@ -89,6 +89,13 @@ async def oauth_token(request: Request, service: UserServiceDep) -> OAuthTokenRe
             tokens = service.oauth_refresh_grant(
                 client_id, client_secret, realm, refresh_token
             )
+        elif grant_type == "google":
+            google_id_token = form.get("google_id_token")
+            if not google_id_token:
+                raise ValueError("google_id_token is required")
+            tokens = service.oauth_google_grant(
+                client_id, client_secret, realm, google_id_token
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

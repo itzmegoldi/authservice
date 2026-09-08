@@ -16,6 +16,10 @@ class IUserRepository(Protocol):
         self, email: str, is_admin: bool = False, realm_name: str | None = None
     ): ...
     def get_user_by_id(self, user_id: int): ...
+    def get_user_by_google_subject(self, google_subject: str): ...
+    def create_google_user(
+        self, google_subject: str, email: str, realm_name: str
+    ) -> int: ...
     def set_refresh_token_jti(self, user_id: int, token_id: str): ...
     def rotate_refresh_token_jti(
         self, user_id: int, old_token_id: str, new_token_id: str
@@ -117,6 +121,40 @@ class UserRepository(IUserRepository):
                 .filter(UserModel.id == user_id)
                 .first()
             )
+
+    def get_user_by_google_subject(self, google_subject: str):
+        with self.db_handler.get_session() as session:
+            return (
+                session.query(UserModel)
+                .options(
+                    joinedload(UserModel.roles),
+                    joinedload(UserModel.groups),
+                    joinedload(UserModel.realm),
+                    joinedload(UserModel.client_roles).joinedload(ClientRoleModel.client),
+                )
+                .filter(UserModel.google_subject == google_subject)
+                .first()
+            )
+
+    def create_google_user(self, google_subject: str, email: str, realm_name: str) -> int:
+        with self.db_handler.get_session() as session:
+            realm = session.query(RealmModel).filter(RealmModel.name == realm_name).first()
+            if not realm:
+                raise ValueError("Realm not found")
+            if session.query(UserModel).filter(UserModel.email == email).first():
+                raise ValueError("Email is already linked to another user")
+            user = UserModel(
+                email=email,
+                realm_id=realm.id,
+                google_subject=google_subject,
+                is_active=True,
+                is_admin=False,
+            )
+            session.add(user)
+            session.flush()
+            user_id = user.id
+            session.commit()
+            return user_id
 
     def set_refresh_token_jti(self, user_id: int, token_id: str):
         with self.db_handler.get_session() as session:

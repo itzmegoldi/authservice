@@ -16,7 +16,12 @@ def fetch_config() -> Config:
 
 
 def build_all_clients(config: Config) -> Clients:
-    return Clients().with_db_handler(config=config).with_token_client(config=config)
+    return (
+        Clients()
+        .with_db_handler(config=config)
+        .with_token_client(config=config)
+        .with_google_client()
+    )
 
 
 def build_all_services(config: Config, clients: Clients) -> Services:

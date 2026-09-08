@@ -23,6 +23,7 @@ class UserModel(BaseModel):
     is_admin = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
     refresh_token_jti = Column(String, nullable=True)
+    google_subject = Column(String, nullable=True, unique=True)
 
     realm = relationship(RealmModel, back_populates="users")
 
