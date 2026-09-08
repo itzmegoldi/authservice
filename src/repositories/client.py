@@ -1,18 +1,17 @@
 from typing import Protocol
 
-from sqlalchemy.orm import joinedload
-
-from src.models.user import ClientModel, ClientRoleModel, UserModel
+from src.models.user import ClientModel, ClientRoleModel, RealmModel, UserModel
 from src.pkg.db import IHandler
 
 
 class IClientRepository(Protocol):
-    def get_client(self, client_id: str): ...
+    def get_client(self, client_id: str, realm_name: str): ...
     def create_client(
         self,
         client_id: str,
         client_secret: str,
         name: str,
+        realm_name: str,
         attributes: dict,
         allowed_grant_types: list[str],
     ): ...
@@ -24,11 +23,13 @@ class ClientRepository(IClientRepository):
     def __init__(self, db_handler: IHandler):
         self.db_handler = db_handler
 
-    def get_client(self, client_id: str):
+    def get_client(self, client_id: str, realm_name: str):
         with self.db_handler.get_session() as session:
             return (
                 session.query(ClientModel)
+                .join(ClientModel.realm)
                 .filter(ClientModel.client_id == client_id)
+                .filter(RealmModel.name == realm_name)
                 .first()
             )
 
@@ -37,15 +38,20 @@ class ClientRepository(IClientRepository):
         client_id: str,
         client_secret: str,
         name: str,
+        realm_name: str,
         attributes: dict,
         allowed_grant_types: list[str],
     ):
         with self.db_handler.get_session() as session:
             if session.query(ClientModel).filter(ClientModel.client_id == client_id).first():
                 raise ValueError("Client ID already exists")
+            realm = session.query(RealmModel).filter(RealmModel.name == realm_name).first()
+            if not realm:
+                raise ValueError("Realm not found")
             client = ClientModel(
                 client_id=client_id,
                 name=name,
+                realm_id=realm.id,
                 attributes=attributes,
                 allowed_grant_types=allowed_grant_types,
             )
@@ -89,6 +95,8 @@ class ClientRepository(IClientRepository):
             user = session.query(UserModel).filter(UserModel.id == user_id).first()
             if not user:
                 raise ValueError("User not found")
+            if user.realm_id != client.realm_id:
+                raise ValueError("User and client must belong to the same realm")
             role = (
                 session.query(ClientRoleModel)
                 .filter(

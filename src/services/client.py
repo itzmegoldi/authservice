@@ -19,6 +19,7 @@ class ClientService(IClientService):
             client_id=request.client_id,
             client_secret=request.client_secret,
             name=request.name,
+            realm_name=request.realm,
             attributes=request.attributes,
             allowed_grant_types=request.allowed_grant_types,
         )

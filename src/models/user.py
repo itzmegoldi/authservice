@@ -9,6 +9,7 @@ class RealmModel(BaseModel):
     name = Column(String, nullable=False, unique=True, default="master")
 
     users = relationship("UserModel", back_populates="realm")
+    clients = relationship("ClientModel", back_populates="realm")
 
 
 class UserModel(BaseModel):
@@ -78,13 +79,17 @@ class ClientModel(BaseModel):
     client_id = Column(String, nullable=False, unique=True)
     client_secret_hash = Column(String, nullable=False)
     name = Column(String, nullable=False)
+    realm_id = Column(ForeignKey("realms.id"), nullable=False)
     attributes = Column(JSON, default=dict)
-    allowed_grant_types = Column(JSON, nullable=False, default=lambda: ["password", "refresh_token"])
+    allowed_grant_types = Column(
+        JSON, nullable=False, default=lambda: ["password", "refresh_token"]
+    )
     is_active = Column(Boolean, nullable=False, default=True)
 
     roles = relationship(
         "ClientRoleModel", back_populates="client", cascade="all, delete-orphan"
     )
+    realm = relationship("RealmModel", back_populates="clients")
 
     def set_secret(self, secret: str):
         self.client_secret_hash = hash_password(secret)

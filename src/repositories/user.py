@@ -12,7 +12,9 @@ class IUserRepository(Protocol):
 
     def bootstrap(self, request: BootstrapUser): ...
     def create_user(self, request: UserCreateRequestDto): ...
-    def get_user(self, email: str): ...
+    def get_user(
+        self, email: str, is_admin: bool = False, realm_name: str | None = None
+    ): ...
     def get_user_by_id(self, user_id: int): ...
     def set_refresh_token_jti(self, user_id: int, token_id: str): ...
     def rotate_refresh_token_jti(
@@ -70,7 +72,7 @@ class UserRepository(IUserRepository):
             session.commit()
             return user
 
-    def get_user(self, email, is_admin=False):
+    def get_user(self, email, is_admin=False, realm_name: str | None = None):
         try:
             params = {"email": email}
 
@@ -80,6 +82,9 @@ class UserRepository(IUserRepository):
             filter_params = []
             for key, value in params.items():
                 filter_params.append(getattr(UserModel, key) == value)
+
+            if realm_name:
+                filter_params.append(RealmModel.name == realm_name)
 
             with self.db_handler.get_session() as session:
                 return (
@@ -92,6 +97,7 @@ class UserRepository(IUserRepository):
                             ClientRoleModel.client
                         ),
                     )
+                    .join(UserModel.realm)
                     .filter(*filter_params)
                     .first()
                 )

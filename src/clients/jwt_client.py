@@ -90,6 +90,7 @@ class JwtClient:
         self,
         user: UserModel,
         client_id: str | None = None,
+        realm: str | None = None,
     ) -> tuple[str, datetime, str]:
 
         expires_at = datetime.now(timezone.utc) + timedelta(
@@ -101,6 +102,7 @@ class JwtClient:
             "iss": self.config.auth.issuer,
             "sub": str(user.id),
             "typ": "refresh",
+            "realm": realm or user.realm.name,
             "jti": token_id,
             "iat": int(datetime.now(timezone.utc).timestamp()),
             "exp": int(expires_at.timestamp()),

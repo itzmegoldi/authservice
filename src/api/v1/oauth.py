@@ -66,6 +66,12 @@ async def oauth_token(request: Request, service: UserServiceDep) -> OAuthTokenRe
     form = await _form_values(request)
     client_id, client_secret = _client_credentials(request, form)
     grant_type = form.get("grant_type")
+    realm = form.get("realm")
+    if not realm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="realm is required",
+        )
 
     try:
         if grant_type == "password":
@@ -74,14 +80,14 @@ async def oauth_token(request: Request, service: UserServiceDep) -> OAuthTokenRe
             if not username or not password:
                 raise ValueError("username and password are required")
             tokens = service.oauth_password_grant(
-                client_id, client_secret, username, password
+                client_id, client_secret, realm, username, password
             )
         elif grant_type == "refresh_token":
             refresh_token = form.get("refresh_token")
             if not refresh_token:
                 raise ValueError("refresh_token is required")
             tokens = service.oauth_refresh_grant(
-                client_id, client_secret, refresh_token
+                client_id, client_secret, realm, refresh_token
             )
         else:
             raise HTTPException(

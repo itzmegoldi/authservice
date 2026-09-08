@@ -29,6 +29,7 @@ async def create_client(
         return {
             "client_id": request.client_id,
             "name": request.name,
+            "realm": request.realm,
             "attributes": request.attributes,
             "allowed_grant_types": request.allowed_grant_types,
         }
