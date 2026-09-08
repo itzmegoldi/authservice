@@ -18,6 +18,7 @@ class TokenAuthenticationMiddleware(BaseHTTPMiddleware):
         {
             "/v1/api/user/admin-login",
             "/v1/api/user/refresh",
+            "/v1/api/oauth/token",
         }
     )
 

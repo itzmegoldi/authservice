@@ -51,10 +51,15 @@ class JwtClient:
             headers={"kid": self.kid},
         )
 
-    def create_access_token(self, user: UserModel) -> tuple[str, datetime, list[str]]:
+    def create_access_token(
+        self, user: UserModel, client_id: str | None = None
+    ) -> tuple[str, datetime]:
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self.config.auth.token_ttl_minutes)
         roles = sorted(role.name for role in user.roles)
+        client_roles = [
+            role for role in user.client_roles if role.client.client_id == client_id
+        ]
         claims = {
             "iss": self.config.auth.issuer,
             "iat": int(now.timestamp()),
@@ -65,7 +70,16 @@ class JwtClient:
             "email": user.email,
             "roles": roles,
             "attributes": user.attributes,
+            "is_admin": user.is_admin,
         }
+        if client_id:
+            claims["client_id"] = client_id
+            claims["resource_access"] = {
+                client_id: {"roles": sorted(role.name for role in client_roles)}
+            }
+            claims["client_role_attributes"] = {
+                role.name: role.attributes for role in client_roles
+            }
         token = self._create_token(
             claims,
             expires_at,
@@ -75,6 +89,7 @@ class JwtClient:
     def create_refresh_token(
         self,
         user: UserModel,
+        client_id: str | None = None,
     ) -> tuple[str, datetime, str]:
 
         expires_at = datetime.now(timezone.utc) + timedelta(
@@ -90,6 +105,8 @@ class JwtClient:
             "iat": int(datetime.now(timezone.utc).timestamp()),
             "exp": int(expires_at.timestamp()),
         }
+        if client_id:
+            claims["client_id"] = client_id
 
         token = self._create_token(
             claims,

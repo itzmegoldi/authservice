@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 
 from src.dto.user import BootstrapUser, UserCreateRequestDto
 
-from src.models.user import RealmModel, UserModel
+from src.models.user import ClientRoleModel, RealmModel, UserModel
 from src.pkg.db import IHandler
 
 
@@ -88,6 +88,9 @@ class UserRepository(IUserRepository):
                         joinedload(UserModel.roles),
                         joinedload(UserModel.groups),
                         joinedload(UserModel.realm),
+                        joinedload(UserModel.client_roles).joinedload(
+                            ClientRoleModel.client
+                        ),
                     )
                     .filter(*filter_params)
                     .first()
@@ -103,6 +106,7 @@ class UserRepository(IUserRepository):
                     joinedload(UserModel.roles),
                     joinedload(UserModel.groups),
                     joinedload(UserModel.realm),
+                    joinedload(UserModel.client_roles).joinedload(ClientRoleModel.client),
                 )
                 .filter(UserModel.id == user_id)
                 .first()

@@ -8,8 +8,8 @@ from typing import Any, Protocol
 
 class TokenClient(Protocol):
     def create_access_token(
-        self, user: UserAccount
-    ) -> tuple[str, datetime, list[str]]: ...
+        self, user: UserAccount, client_id: str | None = None
+    ) -> tuple[str, datetime]: ...
 
     def decode_access_token(self, token: str) -> dict[str, Any]: ...
 

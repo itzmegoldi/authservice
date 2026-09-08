@@ -41,6 +41,18 @@ def get_access_token_claims(request: Request) -> dict[str, Any]:
 AccessTokenClaimsDep = Annotated[dict[str, Any], Depends(get_access_token_claims)]
 
 
+def require_admin(claims: AccessTokenClaimsDep) -> dict[str, Any]:
+    if not claims.get("is_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access is required",
+        )
+    return claims
+
+
+AdminClaimsDep = Annotated[dict[str, Any], Depends(require_admin)]
+
+
 @router.post("/admin-login", status_code=status.HTTP_200_OK)
 async def login(request: UserLoginRequest, service: UserServiceDep, response: Response):
     try:
