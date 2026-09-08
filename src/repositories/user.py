@@ -13,6 +13,11 @@ class IUserRepository(Protocol):
     def bootstrap(self, request: BootstrapUser): ...
     def create_user(self, request: UserCreateRequestDto): ...
     def get_user(self, email: str): ...
+    def get_user_by_id(self, user_id: int): ...
+    def set_refresh_token_jti(self, user_id: int, token_id: str): ...
+    def rotate_refresh_token_jti(
+        self, user_id: int, old_token_id: str, new_token_id: str
+    ) -> bool: ...
 
 
 class UserRepository(IUserRepository):
@@ -65,9 +70,12 @@ class UserRepository(IUserRepository):
             session.commit()
             return user
 
-    def get_user(self, email):
+    def get_user(self, email, is_admin=False):
         try:
             params = {"email": email}
+
+            if is_admin:
+                params["is_admin"] = True
 
             filter_params = []
             for key, value in params.items():
@@ -86,3 +94,38 @@ class UserRepository(IUserRepository):
                 )
         except Exception as e:
             raise e
+
+    def get_user_by_id(self, user_id: int):
+        with self.db_handler.get_session() as session:
+            return (
+                session.query(UserModel)
+                .options(
+                    joinedload(UserModel.roles),
+                    joinedload(UserModel.groups),
+                    joinedload(UserModel.realm),
+                )
+                .filter(UserModel.id == user_id)
+                .first()
+            )
+
+    def set_refresh_token_jti(self, user_id: int, token_id: str):
+        with self.db_handler.get_session() as session:
+            session.query(UserModel).filter(UserModel.id == user_id).update(
+                {UserModel.refresh_token_jti: token_id}
+            )
+            session.commit()
+
+    def rotate_refresh_token_jti(
+        self, user_id: int, old_token_id: str, new_token_id: str
+    ) -> bool:
+        with self.db_handler.get_session() as session:
+            updated_count = (
+                session.query(UserModel)
+                .filter(
+                    UserModel.id == user_id,
+                    UserModel.refresh_token_jti == old_token_id,
+                )
+                .update({UserModel.refresh_token_jti: new_token_id})
+            )
+            session.commit()
+            return updated_count == 1

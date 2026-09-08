@@ -9,7 +9,11 @@ from src.api.v1 import router as v1_router
 from src.builder import get_services
 from src.builder.helper import fetch_config, fetch_config_and_build_services
 from src.pkg import logging
-from src.pkg.middlewares import ErrorHandlingMiddleware, LoggerInitMiddleware
+from src.pkg.middlewares import (
+    ErrorHandlingMiddleware,
+    LoggerInitMiddleware,
+    TokenAuthenticationMiddleware,
+)
 
 logging.configure_logger(
     default_logger_names=[
@@ -45,13 +49,14 @@ app = FastAPI(title="Auth Service", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.add_middleware(ErrorHandlingMiddleware)
 app.add_middleware(LoggerInitMiddleware)
+app.add_middleware(TokenAuthenticationMiddleware)
 
 app.include_router(v1_router)
 
