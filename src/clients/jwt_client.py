@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from uuid import uuid4
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -74,16 +75,18 @@ class JwtClient:
     def create_refresh_token(
         self,
         user: UserModel,
-    ) -> tuple[str, datetime]:
+    ) -> tuple[str, datetime, str]:
 
         expires_at = datetime.now(timezone.utc) + timedelta(
             days=self.config.auth.refresh_token_ttl_days
         )
 
+        token_id = uuid4().hex
         claims = {
             "iss": self.config.auth.issuer,
             "sub": str(user.id),
             "typ": "refresh",
+            "jti": token_id,
             "iat": int(datetime.now(timezone.utc).timestamp()),
             "exp": int(expires_at.timestamp()),
         }
@@ -93,9 +96,15 @@ class JwtClient:
             expires_at,
         )
 
-        return token, expires_at
+        return token, expires_at, token_id
 
     def decode_access_token(self, token: str) -> dict[str, Any]:
+        return self._decode_token(token)
+
+    def decode_refresh_token(self, token: str) -> dict[str, Any]:
+        return self._decode_token(token)
+
+    def _decode_token(self, token: str) -> dict[str, Any]:
         return jwt.decode(
             token,
             self._public_pem(),

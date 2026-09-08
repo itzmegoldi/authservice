@@ -21,6 +21,7 @@ class UserModel(BaseModel):
     realm_id = Column(ForeignKey("realms.id"), nullable=False)
     is_admin = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    refresh_token_jti = Column(String, nullable=True)
 
     realm = relationship(RealmModel, back_populates="users")
 

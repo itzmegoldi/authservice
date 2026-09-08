@@ -14,6 +14,7 @@ redis:
 auth:
   issuer: $env["AUTH_ISSUER"]
   token_ttl_minutes: 30
+  refresh_token_ttl_days: 30
   keys:
     secret: $env["AUTH_KEYS_SECRET"]
     public: $env["AUTH_KEYS_PUBLIC"]
