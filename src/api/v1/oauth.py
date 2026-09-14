@@ -39,9 +39,9 @@ def _client_credentials(request: Request, form: dict[str, str]) -> tuple[str, st
         if scheme.lower() != "basic" or not encoded_value:
             raise _invalid_client()
         try:
-            client_id, client_secret = base64.b64decode(
-                encoded_value, validate=True
-            ).decode().split(":", 1)
+            client_id, client_secret = (
+                base64.b64decode(encoded_value, validate=True).decode().split(":", 1)
+            )
         except (UnicodeDecodeError, ValueError, binascii.Error):
             raise _invalid_client() from None
         return client_id, client_secret

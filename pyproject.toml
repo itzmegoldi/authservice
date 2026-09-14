@@ -23,6 +23,7 @@ dependencies = [
     "pyjwt (>=2.13.0,<3.0.0)",
     "cryptography (>=49.0.0,<50.0.0)",
     "google-auth (>=2.0.0,<3.0.0)",
+    "requests (>=2.34.2,<3.0.0)",
 ]
 
 
