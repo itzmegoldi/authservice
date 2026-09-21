@@ -39,6 +39,7 @@ async def lifespan(_: FastAPI):
 
     try:
         get_user_service().bootstrap()
+        logger.info("Bootstrap user created")
     except Exception as e:
         logger.exception(f"Failed to bootstrap application {str(e)}")
 
