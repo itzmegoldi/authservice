@@ -18,6 +18,8 @@ auth:
   keys:
     secret: $env["AUTH_KEYS_SECRET"]
     public: $env["AUTH_KEYS_PUBLIC"]
+  google:
+    client_id: $env["GOOGLE_OAUTH_CLIENT_ID"]
   bootstrap:
     admin_email: $env["AUTH_ADMIN_EMAIL"]
     admin_password: $env["AUTH_ADMIN_PASSWORD"]

@@ -16,14 +16,24 @@ def fetch_config() -> Config:
 
 
 def build_all_clients(config: Config) -> Clients:
-    return Clients().with_db_handler(config=config).with_token_client(config=config)
+    return (
+        Clients()
+        .with_db_handler(config=config)
+        .with_token_client(config=config)
+        .with_google_client()
+    )
 
 
 def build_all_services(config: Config, clients: Clients) -> Services:
-    repo = Repos().with_user_repository(db_handler=clients.db_handler)
+    repo = (
+        Repos()
+        .with_user_repository(db_handler=clients.db_handler)
+        .with_client_repository(db_handler=clients.db_handler)
+    )
     services = Services().with_user_service(
         config=config, clients=clients, repo=repo.user_repository
-    )
+    ).with_client_service(repo=repo.client_repository)
+    services.user_service.with_client_repository(repo.client_repository)
     return services
 
 
