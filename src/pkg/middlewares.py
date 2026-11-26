@@ -19,6 +19,9 @@ class TokenAuthenticationMiddleware(BaseHTTPMiddleware):
             "/v1/api/user/admin-login",
             "/v1/api/user/refresh",
             "/v1/api/oauth/token",
+            "/v1/api/oauth/jwks.json",
+            "/v1/api/.well-known/openid-configuration",
+            "/health",
         }
     )
 

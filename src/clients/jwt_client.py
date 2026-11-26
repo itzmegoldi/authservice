@@ -30,10 +30,7 @@ class JwtClient:
                 else self.private_key.public_key()
             )
         else:
-            self.private_key = rsa.generate_private_key(
-                public_exponent=65537, key_size=2048
-            )
-            self.public_key = self.private_key.public_key()
+            raise ValueError("An RSA private signing key must be configured")
         self.kid = f"auth-service-{int(datetime.now(timezone.utc).timestamp())}"
 
     def _create_token(
@@ -74,6 +71,7 @@ class JwtClient:
         }
         if client_id:
             claims["client_id"] = client_id
+            claims["aud"] = client_id
             claims["resource_access"] = {
                 client_id: {"roles": sorted(role.name for role in client_roles)}
             }
@@ -86,24 +84,44 @@ class JwtClient:
         )
         return token, expires_at
 
+    def create_client_access_token(
+        self, client_id: str, realm: str, scopes: list[str] | None = None
+    ) -> tuple[str, datetime]:
+        """Issue a service identity token for the client-credentials grant."""
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(minutes=self.config.auth.token_ttl_minutes)
+        claims = {
+            "iss": self.config.auth.issuer,
+            "sub": client_id,
+            "typ": "client",
+            "realm": realm,
+            "client_id": client_id,
+            "aud": client_id,
+            "scope": " ".join(sorted(scopes or [])),
+        }
+        return self._create_token(claims, expires_at), expires_at
+
     def create_refresh_token(
         self,
         user: UserModel,
         client_id: str | None = None,
         realm: str | None = None,
-    ) -> tuple[str, datetime, str]:
+        session_id: str | None = None,
+    ) -> tuple[str, datetime, str, str]:
 
         expires_at = datetime.now(timezone.utc) + timedelta(
             days=self.config.auth.refresh_token_ttl_days
         )
 
         token_id = uuid4().hex
+        session_id = session_id or uuid4().hex
         claims = {
             "iss": self.config.auth.issuer,
             "sub": str(user.id),
             "typ": "refresh",
             "realm": realm or user.realm.name,
             "jti": token_id,
+            "sid": session_id,
             "iat": int(datetime.now(timezone.utc).timestamp()),
             "exp": int(expires_at.timestamp()),
         }
@@ -115,7 +133,7 @@ class JwtClient:
             expires_at,
         )
 
-        return token, expires_at, token_id
+        return token, expires_at, token_id, session_id
 
     def decode_access_token(self, token: str) -> dict[str, Any]:
         return self._decode_token(token)
@@ -129,6 +147,7 @@ class JwtClient:
             self._public_pem(),
             algorithms=["RS256"],
             issuer=self.config.auth.issuer,
+            options={"verify_aud": False},
         )
 
     def jwks(self) -> dict[str, Any]:

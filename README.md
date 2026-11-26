@@ -4,7 +4,8 @@ Keycloak-inspired authentication service scaffolded with FastAPI, Alembic, SQLit
 
 ## Stack
 
-- FastAPI for local login, registration, JWT issuing, JWT verification, JWKS, RBAC, and ABAC policy checks.
+- FastAPI identity provider for JWT issuing, JWKS discovery, OAuth client
+  authentication, RBAC claims, and rotating refresh-token sessions.
 - Python worker that consumes integration verification jobs from Kafka.
 - Alembic migrations with SQLite for the first persistence layer.
 - Boilerplate-style YAML settings in `backend/config/default.yaml` plus `backend/config/{APP_ENV}.yaml`.
@@ -42,15 +43,37 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
 ```
 
 ```bash
-curl -s http://localhost:8080/api/v1/auth/.well-known/jwks.json
+curl -s http://localhost:8080/v1/api/.well-known/openid-configuration
 ```
 
 ```bash
-curl -s -X POST http://localhost:8080/api/v1/authorize \
-  -H 'content-type: application/json' \
-  -H "authorization: Bearer $TOKEN" \
-  -d '{"realm":"master","resource":"integration","action":"verify","context":{}}'
+curl -s http://localhost:8080/v1/api/oauth/jwks.json
 ```
+
+## Integrating a service
+
+Create a client in the administration console and enable only the grant types
+that service needs. A backend that acts on behalf of a user exchanges the
+user's credentials at the token endpoint; a machine-to-machine backend uses
+the `client_credentials` grant:
+
+```bash
+curl -s -X POST http://localhost:8080/v1/api/oauth/token \
+  -u "$CLIENT_ID:$CLIENT_SECRET" \
+  -H 'content-type: application/x-www-form-urlencoded' \
+  -d 'grant_type=client_credentials&realm=master'
+```
+
+Resource services should fetch the discovery document once, cache the JWKS by
+`kid`, and verify every access token's RS256 signature, `iss`, `exp`, `typ`,
+`realm`, and `aud`. For user tokens, authorize using
+`resource_access[client_id].roles`; for service tokens, require `typ=client`
+and allow only explicitly granted scopes. Never accept a token for another
+client audience.
+
+Set `AUTH_KEYS_SECRET` to the PEM-encoded RSA private key and
+`AUTH_KEYS_PUBLIC` to its public key in the deployment secret store. These
+keys are mandatory and must be identical on every API/worker replica.
 
 ## Notes
 

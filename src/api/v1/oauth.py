@@ -18,7 +18,7 @@ class OAuthTokenResponse(BaseModel):
     access_token: str
     token_type: str = "Bearer"
     expires_in: int
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 async def _form_values(request: Request) -> dict[str, str]:
@@ -96,6 +96,10 @@ async def oauth_token(request: Request, service: UserServiceDep) -> OAuthTokenRe
             tokens = service.oauth_google_grant(
                 client_id, client_secret, realm, google_id_token
             )
+        elif grant_type == "client_credentials":
+            tokens = service.oauth_client_credentials_grant(
+                client_id, client_secret, realm
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -111,6 +115,6 @@ async def oauth_token(request: Request, service: UserServiceDep) -> OAuthTokenRe
 
     return OAuthTokenResponse(
         access_token=tokens["access"],
-        refresh_token=tokens["refresh"],
+        refresh_token=tokens.get("refresh"),
         expires_in=service.access_token_ttl_seconds(),
     )

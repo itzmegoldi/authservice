@@ -36,6 +36,9 @@ class IUserService(Protocol):
     def oauth_google_grant(
         self, client_id: str, client_secret: str, realm: str, google_id_token: str
     ) -> dict: ...
+    def oauth_client_credentials_grant(
+        self, client_id: str, client_secret: str, realm: str
+    ) -> dict: ...
 
 
 class UserService(IUserService):
@@ -96,6 +99,9 @@ class UserService(IUserService):
 
             user_id = int(claims["sub"])
             old_token_id = claims["jti"]
+            session_id = claims.get("sid")
+            if not session_id:
+                raise ValueError("Refresh token session is invalid")
             user = self.repo.get_user_by_id(user_id)
             if not user or not user.is_active:
                 raise ValueError("User is not available")
@@ -103,11 +109,12 @@ class UserService(IUserService):
                 raise ValueError("Refresh token realm does not match the user")
 
             access_token, _ = self.token_client.create_access_token(user, client_id)
-            new_refresh_token, _, new_token_id = self.token_client.create_refresh_token(
-                user, client_id=client_id, realm=claims.get("realm")
+            new_refresh_token, new_expiry, new_token_id, _ = self.token_client.create_refresh_token(
+                user, client_id=client_id, realm=claims.get("realm"), session_id=session_id
             )
-            if not self.repo.rotate_refresh_token_jti(
-                user.id, old_token_id, new_token_id
+            if not self.repo.rotate_refresh_session(
+                user.id, user.realm_id, client_id, session_id, old_token_id,
+                new_token_id, int(new_expiry.timestamp()),
             ):
                 raise ValueError("Refresh token has already been used or revoked")
 
@@ -171,6 +178,20 @@ class UserService(IUserService):
             raise ValueError("User is not available")
         return self._issue_token_pair(user, client_id=client_id, realm=realm)
 
+    def oauth_client_credentials_grant(
+        self, client_id: str, client_secret: str, realm: str
+    ) -> dict:
+        self._validate_oauth_client(
+            client_id, client_secret, realm, "client_credentials"
+        )
+        client = self.client_repo.get_client(client_id, realm) if self.client_repo else None
+        if not client:
+            raise PermissionError("Invalid OAuth client credentials")
+        token, _ = self.token_client.create_client_access_token(
+            client_id, realm, client.attributes.get("scopes", [])
+        )
+        return {"access": token}
+
     def _validate_oauth_client(
         self, client_id: str, client_secret: str, realm: str, grant_type: str
     ) -> None:
@@ -189,8 +210,11 @@ class UserService(IUserService):
         self, user, client_id: str | None = None, realm: str | None = None
     ) -> dict:
         access_token, _ = self.token_client.create_access_token(user, client_id)
-        refresh_token, _, token_id = self.token_client.create_refresh_token(
+        refresh_token, refresh_expiry, token_id, session_id = self.token_client.create_refresh_token(
             user, client_id=client_id, realm=realm or user.realm.name
         )
-        self.repo.set_refresh_token_jti(user.id, token_id)
+        self.repo.create_refresh_session(
+            user.id, user.realm_id, client_id, session_id, token_id,
+            int(refresh_expiry.timestamp()),
+        )
         return {"access": access_token, "refresh": refresh_token}

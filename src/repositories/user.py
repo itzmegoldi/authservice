@@ -1,10 +1,12 @@
+import hashlib
+import time
 from typing import Protocol
 
 from sqlalchemy.orm import joinedload
 
 from src.dto.user import BootstrapUser, UserCreateRequestDto
 
-from src.models.user import ClientRoleModel, RealmModel, UserModel
+from src.models.user import ClientRoleModel, RealmModel, RefreshSessionModel, UserModel
 from src.pkg.db import IHandler
 
 
@@ -20,9 +22,13 @@ class IUserRepository(Protocol):
     def create_google_user(
         self, google_subject: str, email: str, realm_name: str
     ) -> int: ...
-    def set_refresh_token_jti(self, user_id: int, token_id: str): ...
-    def rotate_refresh_token_jti(
-        self, user_id: int, old_token_id: str, new_token_id: str
+    def create_refresh_session(
+        self, user_id: int, realm_id: int, client_id: str | None, family_id: str,
+        token_id: str, expires_at: int,
+    ) -> None: ...
+    def rotate_refresh_session(
+        self, user_id: int, realm_id: int, client_id: str | None, family_id: str,
+        old_token_id: str, new_token_id: str, expires_at: int,
     ) -> bool: ...
 
 
@@ -156,24 +162,60 @@ class UserRepository(IUserRepository):
             session.commit()
             return user_id
 
-    def set_refresh_token_jti(self, user_id: int, token_id: str):
+    @staticmethod
+    def _token_id_hash(token_id: str) -> str:
+        return hashlib.sha256(token_id.encode()).hexdigest()
+
+    def create_refresh_session(
+        self, user_id: int, realm_id: int, client_id: str | None, family_id: str,
+        token_id: str, expires_at: int,
+    ) -> None:
         with self.db_handler.get_session() as session:
-            session.query(UserModel).filter(UserModel.id == user_id).update(
-                {UserModel.refresh_token_jti: token_id}
-            )
+            session.add(RefreshSessionModel(
+                user_id=user_id, realm_id=realm_id, client_id=client_id,
+                family_id=family_id, token_id_hash=self._token_id_hash(token_id),
+                expires_at=expires_at,
+            ))
             session.commit()
 
-    def rotate_refresh_token_jti(
-        self, user_id: int, old_token_id: str, new_token_id: str
+    def rotate_refresh_session(
+        self, user_id: int, realm_id: int, client_id: str | None, family_id: str,
+        old_token_id: str, new_token_id: str, expires_at: int,
     ) -> bool:
+        now = int(time.time())
         with self.db_handler.get_session() as session:
             updated_count = (
-                session.query(UserModel)
+                session.query(RefreshSessionModel)
                 .filter(
-                    UserModel.id == user_id,
-                    UserModel.refresh_token_jti == old_token_id,
+                    RefreshSessionModel.user_id == user_id,
+                    RefreshSessionModel.realm_id == realm_id,
+                    RefreshSessionModel.client_id == client_id,
+                    RefreshSessionModel.family_id == family_id,
+                    RefreshSessionModel.token_id_hash == self._token_id_hash(old_token_id),
+                    RefreshSessionModel.rotated_at.is_(None),
+                    RefreshSessionModel.revoked_at.is_(None),
+                    RefreshSessionModel.expires_at > now,
                 )
-                .update({UserModel.refresh_token_jti: new_token_id})
+                .update({RefreshSessionModel.rotated_at: now})
             )
+            if updated_count == 1:
+                session.add(RefreshSessionModel(
+                    user_id=user_id, realm_id=realm_id, client_id=client_id,
+                    family_id=family_id, token_id_hash=self._token_id_hash(new_token_id),
+                    expires_at=expires_at,
+                ))
+                session.commit()
+                return True
+
+            # A known, already-used token is a replay attempt. Revoke its whole
+            # family so neither side can continue the session.
+            known_token = session.query(RefreshSessionModel).filter(
+                RefreshSessionModel.token_id_hash == self._token_id_hash(old_token_id)
+            ).first()
+            if known_token:
+                session.query(RefreshSessionModel).filter(
+                    RefreshSessionModel.family_id == known_token.family_id,
+                    RefreshSessionModel.revoked_at.is_(None),
+                ).update({RefreshSessionModel.revoked_at: now})
             session.commit()
-            return updated_count == 1
+            return False

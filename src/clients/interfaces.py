@@ -15,6 +15,10 @@ class TokenClient(Protocol):
 
     def decode_refresh_token(self, token: str) -> dict[str, Any]: ...
 
+    def create_client_access_token(
+        self, client_id: str, realm: str, scopes: list[str] | None = None
+    ) -> tuple[str, datetime]: ...
+
     def jwks(self) -> dict[str, Any]: ...
 
 

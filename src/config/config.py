@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 from src.pkg.config import ConfigMixIn
 
 
@@ -35,8 +35,12 @@ class BootstrapConfig(BaseModel):
 
 
 class KeyConfig(BaseModel):
-    rsa_private_pem: str = ""
-    rsa_public_pem: str = ""
+    rsa_private_pem: str = Field(
+        validation_alias=AliasChoices("rsa_private_pem", "secret")
+    )
+    rsa_public_pem: str = Field(
+        validation_alias=AliasChoices("rsa_public_pem", "public")
+    )
 
 
 class GoogleAuthConfig(BaseModel):

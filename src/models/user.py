@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, JSON, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from src.pkg.db import BaseModel
 from src.pkg.security import hash_password, verify_password
@@ -125,3 +125,18 @@ class UserClientRoleModel(BaseModel):
 
     user_id = Column(ForeignKey("users.id"), nullable=False)
     client_role_id = Column(ForeignKey("client_roles.id"), nullable=False)
+
+
+class RefreshSessionModel(BaseModel):
+    """One-time refresh-token state for a user/client session family."""
+
+    __tablename__ = "refresh_sessions"
+
+    user_id = Column(ForeignKey("users.id"), nullable=False)
+    realm_id = Column(ForeignKey("realms.id"), nullable=False)
+    client_id = Column(String, nullable=True)
+    family_id = Column(String, nullable=False, index=True)
+    token_id_hash = Column(String, nullable=False, unique=True)
+    expires_at = Column(BigInteger, nullable=False)
+    rotated_at = Column(BigInteger, nullable=True)
+    revoked_at = Column(BigInteger, nullable=True)
